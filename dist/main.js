@@ -6,11 +6,8 @@
                         return require(mapping[pathUrl])
                     }
                     const module = {
-                        exports :{
-    
-                        }
+                        exports :{}
                     }
-                    
                     fn(localUrl,module,module.exports)
                     return module.exports
                 }
