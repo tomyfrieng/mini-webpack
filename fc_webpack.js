@@ -1,116 +1,69 @@
 const fs = require('fs')
 const path  = require('path')
-const parse = require('@babel/parser')
-const traverse = require('@babel/traverse').default
-const babel = require('@babel/core')
+const config = require('./lib/config')// 配置文件
+const Creatasset = require('./lib/create-asset.js')
 
 let id= 0
-function createAsset(filename){
-    const content = fs.readFileSync(filename,'utf-8')   
-    //获取ast
-    const ast = parse.parse(content,{
-        sourceType:'module'
-    })
-    // 获取文件里面的依赖
-    let fileArray = []
-    traverse(ast,{
-        ImportDeclaration:({node})=>{
-            fileArray.push(node.source.value)
+class Jscode {
+    constructor(entry){
+        this.graph =  this.creatGraph(entry)
+        this.result = this.bundel()
+    }
+
+    //建立文件依赖图谱
+    creatGraph(entry){
+        const entryCode = new Creatasset(entry,id++)
+        const entryArray  = [entryCode]
+        for (const keyCode of entryArray) {
+            const dirname = path.dirname(keyCode.filename)
+            keyCode.mapping = {}
+            keyCode.fileArray.forEach((pathUrl)=>{
+                const absPath = path.resolve(dirname,pathUrl)
+                const child = new Creatasset(absPath,id++)
+                keyCode.mapping[pathUrl] = child.id
+                entryArray.push(child)
+            })
         }
-    })
-    //拿到文件的code
-    const {code}  = babel.transformFromAstSync(ast,'',{
-        presets:['@babel/preset-env']
-    })
-
-    const obj = {
-        id:id++,
-        filename,
-        code,
-        fileArray
+        return entryArray
     }
-    return obj
-}
 
-class aa{
-    constructor(){
-        
-    }
-    getAst(){
-        const content = fs.readFileSync(filename,'utf-8')   
-        //获取ast
-        const ast = parse.parse(content,{
-            sourceType:'module'
+    //将图谱遍历拿到code，放在自执行函数里面
+    bundel (){
+        let modules = ''
+        this.graph.forEach((mod)=>{
+            modules+=`
+                ${mod.id}:[
+                    function(require,modules,exports){
+                        ${mod.code}
+                    },
+                    ${JSON.stringify(mod.mapping)}
+                ],
+            `
         })
-        return ast
-    }
-}
-
-function creatGraph(entry){
-    const entryCode = createAsset(entry)
-    const entryArray  = [entryCode]
-
-    for (const keyCode of entryArray) {
-        const dirname = path.dirname(keyCode.filename)
-        keyCode.mapping = {}
-        keyCode.fileArray.forEach((pathUrl)=>{
-            const absPath = path.resolve(dirname,pathUrl)
-            //console.log('pathUrl',absPath)
-            const child = createAsset(absPath)
-            keyCode.mapping[pathUrl] = child.id
-            entryArray.push(child)
-        })
-    }
-    console.log('entryArray',entryArray)
-    return entryArray
-}
-
-function bundel (graph){
-    let modules = ''
-    graph.forEach((mod)=>{
-        modules+=`
-            ${mod.id}:[
-                function(require,modules,exports){
-                    ${mod.code}
-                },
-                ${JSON.stringify(mod.mapping)}
-            ],
-        `
-    })
-
-    const result = `
-        (function(modules){
-            function require(id){
-                const [fn,mapping]= modules[id]
-                function localUrl(pathUrl){
-                    return require(mapping[pathUrl])
-                }
-                const module = {
-                    exports :{
-
+    
+        const result = `
+            (function(modules){
+                function require(id){
+                    const [fn,mapping]= modules[id]
+                    function localUrl(pathUrl){
+                        return require(mapping[pathUrl])
                     }
+                    const module = {
+                        exports :{}
+                    }
+                    fn(localUrl,module,module.exports)
+                    return module.exports
                 }
-                
-                fn(localUrl,module,module.exports)
-                return module.exports
-            }
-            require(0)
-        })({${modules}})
-    `
-    return result
+                require(0)
+            })({${modules}})
+        `
+        return result
+    }
+}
+const jscode = new Jscode(config.entry)
+const output = config&&config.output
+
+if(output.path&&output.filename&&jscode.result){
+    fs.writeFileSync(path.join(output.path,output.filename),jscode.result,['utf-8'])
 }
 
-const graph =  creatGraph('./src/index.js')
-const result = bundel(graph)
-
-console.log('~~~~~~开始~~~~~~~~~')
-console.log('~~~~~~~~~~~~~~~')
-console.log('~~~~~~~~~~~~~~~')
-//console.log('result',result)
-
-console.log('~~~~~~~~~~~~~~~')
-console.log('~~~~~~~~~~~~~~~')
-console.log('~~~~~~~~~结束~~~~~~')
-
-
-fs.writeFileSync('./dist/main1.js',result,['utf-8'])

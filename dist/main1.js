@@ -28,10 +28,10 @@ function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { "d
 
 document.write('person:' + _person["default"] + '<br/>' + 'person2:' + _person2["default"]);
                 },
-                {"./person.js":1,"./person2.js":2}
+                {"./person.js":0,"./person2.js":0}
             ],
         
-            1:[
+            0:[
                 function(require,modules,exports){
                     "use strict";
 
@@ -46,10 +46,10 @@ var _default = "hello ".concat(_content.content);
 
 exports["default"] = _default;
                 },
-                {"./content.js":3}
+                {"./content.js":0}
             ],
         
-            2:[
+            0:[
                 function(require,modules,exports){
                     "use strict";
 
@@ -64,10 +64,10 @@ var _default = "hello ".concat(_content.content);
 
 exports["default"] = _default;
                 },
-                {"./content.js":4}
+                {"./content.js":0}
             ],
         
-            3:[
+            0:[
                 function(require,modules,exports){
                     "use strict";
 
@@ -81,7 +81,7 @@ exports.content = content;
                 {}
             ],
         
-            4:[
+            0:[
                 function(require,modules,exports){
                     "use strict";
 
